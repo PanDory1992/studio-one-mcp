@@ -127,10 +127,15 @@ function mteApply(context, ops) {
 			// { channel, to }: send a channel's output to another channel's input (a bus, the main out).
 			var all = mteChannels(consoleObj);
 			var src = null, dst = null, nSrc = 0, nDst = 0;
+			var srcA = null, dstA = null, nSrcA = 0, nDstA = 0;
 			for (var a = 0; a < all.length; a++) {
-				if (all[a].label === op.channel) { src = all[a].channel; nSrc++; }
-				if (all[a].label === op.to) { dst = all[a].channel; nDst++; }
+				var isTrackRow = all[a].channel && all[a].channel.channelType === "MusicTrack";
+				if (all[a].label === op.channel) { src = all[a].channel; nSrc++; if (!isTrackRow) { srcA = all[a].channel; nSrcA++; } }
+				if (all[a].label === op.to) { dst = all[a].channel; nDst++; if (!isTrackRow) { dstA = all[a].channel; nDstA++; } }
 			}
+			// an instrument track and its instrument channel share the label: take the audio channel
+			if (nSrc > 1 && nSrcA === 1) { src = srcA; nSrc = 1; }
+			if (nDst > 1 && nDstA === 1) { dst = dstA; nDst = 1; }
 			var devf = root && mteFn(root, "createFunctions") ? root.createFunctions("DeviceEditFunctions") : null;
 			if (nSrc !== 1) r.error = nSrc ? "channel name is ambiguous: " + op.channel : "no channel named " + op.channel;
 			else if (nDst !== 1) r.error = nDst ? "destination name is ambiguous: " + op.to : "no channel named " + op.to;

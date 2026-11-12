@@ -144,11 +144,16 @@ function mtoChannel(context, label) {
 	if (!mtoFn(con, "getChannelList")) return { error: "the mixer console is not available" };
 	var list = con.getChannelList(1);
 	if (!list || !mtoFn(list, "getChannel")) return { error: "the mixer console is not available" };
-	var hit = null, n = 0;
+	var hit = null, n = 0, audio = null, na = 0;
 	for (var i = 0; i < list.numChannels; i++) {
 		var c = list.getChannel(i);
-		if (c && c.label === label) { hit = c; n++; }
+		if (c && c.label === label) {
+			hit = c; n++;
+			if (c.channelType !== "MusicTrack") { audio = c; na++; }
+		}
 	}
+	// an instrument track and its instrument channel share the label: take the audio channel
+	if (n > 1 && na === 1) { hit = audio; n = 1; }
 	if (n !== 1) return { error: n ? "channel name is ambiguous: " + label : "no channel named " + label };
 	return { channel: hit };
 }

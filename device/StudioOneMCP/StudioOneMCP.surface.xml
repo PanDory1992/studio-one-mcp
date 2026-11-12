@@ -17,6 +17,7 @@
 		<Global>
 			<Toggle control="bridgeTick" param="bridgeTick"/>
 		</Global>
+		<DeviceMapping device="MusicTrackDevice" name="musicTrack"><Bank target="FocusInstrument" name="focusInstrument"><Strip/></Bank></DeviceMapping>
 		<DeviceMapping device="MixerConsole" name="mixer">
 			<ScrollBank target="AllBank" pagesize="256" name="channels">
 				<foreach variable="$ch" count="256">
@@ -34,3 +35,4 @@
 		</DeviceMapping>
 	</Mappings>
 </ControlSurface>
+

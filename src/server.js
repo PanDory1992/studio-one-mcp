@@ -28,6 +28,7 @@ import { snapshot } from './snapshots.js';
 import { mixSnapshot } from './mixsnap.js';
 import { bounce } from './bounce.js';
 import { diffSongs } from './diff.js';
+import * as uszy from './uszy.js';
 import { gridBeats } from './grid.js';
 import { version } from './version.js';
 
@@ -425,6 +426,48 @@ server.tool(
     const channels = [...peak].map(([label, db]) => ({ label, peakDb: Math.round(db * 10) / 10 }));
     return { durationMs: duration_ms, channels, clipped: channels.filter((c) => c.peakDb > -0.1).map((c) => c.label) };
   }),
+);
+
+server.tool(
+  'uszy_status',
+  'Uszy ("ears"): our VST3 loudness meters in Studio One. Every instance with its channel name (from kanaly.json), alive flag, momentary/short-term LUFS, peak dBFS and its gain trim (dB). Measures what is really heard, unlike live_meters. Note: Studio One Low Latency Monitoring must be off or monitored signals bypass the plug-ins (they read silence).',
+  {},
+  guard(async () => ({ dir: uszy.uszyDir(), instances: uszy.instances() })),
+);
+
+server.tool(
+  'uszy_measure',
+  'Measure loudness for `seconds` (max 60) on every Uszy instance (or only `channels`, names or ids): LUFS over the window (momentary values above -70 LUFS, energy mean), sample count and max peak. Play something first (e.g. a Trener jam).',
+  { seconds: z.number().optional(), channels: z.array(z.string()).optional() },
+  guard(async ({ seconds, channels }) => uszy.measure(seconds ?? 10, channels ?? null)),
+);
+
+server.tool(
+  'uszy_set_gain',
+  'Set the gain trim of one Uszy instance (channel name or id): gain_db absolute, or add_db relative. Range -40..+24 dB, saved with the song.',
+  { channel: z.string(), gain_db: z.number().optional(), add_db: z.number().optional() },
+  guard(async ({ channel, gain_db, add_db }) => uszy.setGain(channel, { gain_db, add_db })),
+);
+
+server.tool(
+  'uszy_level',
+  'Level channels to target loudness: measures `seconds` (while something plays), then sets each listed channel\'s gain so it lands on its target LUFS. targets: {"Perkusja Bus": -33, ...}. Returns measured, gain before/after.',
+  { targets: z.record(z.number()), seconds: z.number().optional() },
+  guard(async ({ targets, seconds }) => {
+    const m = await uszy.measure(seconds ?? 12, Object.keys(targets));
+    return m.map((r) => {
+      const t = targets[r.channel] ?? targets[r.id];
+      if (r.lufs === null || t === undefined) return { ...r, skipped: r.lufs === null ? 'no signal' : 'no target' };
+      return { ...r, target: t, ...uszy.setGain(r.id, { add_db: Math.round((t - r.lufs) * 10) / 10 }) };
+    });
+  }),
+);
+
+server.tool(
+  'uszy_name',
+  'Give an Uszy instance (id) a channel name in kanaly.json. A newly inserted instance is the one with the latest `created`.',
+  { id: z.string(), channel: z.string() },
+  guard(async ({ id, channel }) => uszy.setName(id, channel)),
 );
 
 server.tool(

@@ -2,6 +2,7 @@
 // Studio One 5 gives scripts no usable timer, so the device only wakes up when a
 // mapped control changes; each press toggles the component's bridgeTick param.
 import { createRequire } from 'node:module';
+import { createConnection } from 'node:net';
 
 const require = createRequire(import.meta.url);
 const NOTE = 119; // must match <MidiMessage status="#90" address="#77"> in StudioOneMCP.surface.xml
@@ -37,9 +38,15 @@ function open() {
 }
 
 export function nudge() {
+  if (process.env.STUDIO_ONE_MCP_BRIDGE_TCP) {
+    const socket = createConnection({ host: '127.0.0.1', port: Number(process.env.STUDIO_ONE_MCP_BRIDGE_TCP) });
+    socket.on('error', () => {});
+    socket.end('doorbell\n');
+    return;
+  }
   const out = open();
   out.sendMessage([0x90, NOTE, 127]); // press
   out.sendMessage([0x90, NOTE, 0]); // release
 }
 
-export const midiPort = () => portName;
+export const midiPort = () => process.env.STUDIO_ONE_MCP_BRIDGE_TCP ? 'Codex Studio One Control (local relay)' : portName;
