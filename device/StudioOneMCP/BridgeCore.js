@@ -418,6 +418,11 @@ class Bridge {
             const c = list.getChannel(i);
             if (c && c.label === label) hits.push(c);
         }
+        if (hits.length > 1) {
+            // an instrument track and its instrument channel share the label: the audio channel is the one with inserts
+            const audio = hits.filter(c => c.channelType !== "MusicTrack");
+            if (audio.length === 1) return audio[0];
+        }
         if (hits.length !== 1) return fail(hits.length ? "channel name is ambiguous: " + label : "no channel named " + label);
         return hits[0];
     }
